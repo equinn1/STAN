@@ -1,0 +1,86 @@
+\documentclass{article}
+
+\begin{document}
+Naming conventions for output files - dataset name includes a timestamp
+<<>>=
+pgm_name="hgrowth6"
+stanfit_name=paste("Rdata/",pgm_name,"_stanfit_",format(Sys.time(),'%m%d%Y%H%M%S'),".Rdata",sep="")  #STAN fit data structure
+irt_name1=paste("Rdata/",pgm_name,"_irtparms1_",format(Sys.time(),'%m%d%Y%H%M%S'),".Rdata",sep="")   #b values year 1
+irt_name2=paste("Rdata/",pgm_name,"_irtparms2_",format(Sys.time(),'%m%d%Y%H%M%S'),".Rdata",sep="")   #b values year 2
+thetas_name=paste("Rdata/",pgm_name,"_thetas_",format(Sys.time(),'%m%d%Y%H%M%S'),".Rdata",sep="")    #ability parameters 
+@
+1PL logistic for dichotomous
+<<>>=
+N_stu=50L                                   #number of students
+N_dichot <- 10L                             #number of (dichotomous) questions
+@
+Load the IRT parameters for the MCAS dichotomous items
+<<>>=
+getwd()                                     #list working directory
+load("IRT_parms.Rdata")                     #use MCAS IRT parameters to get mean, sd of b values
+#select grade 3 and 4 MCAS MTH dichotomous scoring items only
+MCAS3<-subset(IRT_parms, grade==3 & year==2011 & subj=='MTH' & dichot & scoring)
+b03=MCAS3$b                                   #put grade 3 difficulty parameters in array b03
+str(MCAS3)                                    #IRT parameter dataframe structure
+MCAS4<-subset(IRT_parms, grade==4 & year==2011 & subj=='MTH' & dichot & scoring)
+b04=MCAS4$b                                   #put grade 4 difficulty parameters in array b04
+str(MCAS4)                                    #show MCAS IRT parameter dataframe structure
+@
+Compute the mean and sd of the b values for the hyperpriors
+<<>>=
+#
+b1 <- rnorm(N_dichot,mean(b03),sd(b03))     #generate year 1 b vector from normal matching MCAS mean and sd
+b2 <- rnorm(N_dichot,mean(b04),sd(b04))     #generate year 2 b vector from normal matching MCAS mean and sd
+bdf1=data.frame(b1)                         #save generated b values for future reference
+save(bdf1,file=irt_name1)
+bdf2=data.frame(b2)
+save(bdf2,file=irt_name2)
+@
+Generate the student abilities as standard normal
+<<>>=        
+thetas=rnorm(N_stu)                         #standard normal prior for abilities
+print(thetas)                               #print them
+thetadf=data.frame(thetas)                  #save them for future reference
+save(thetadf,file=thetas_name)
+@
+Generate the simulated item results for year 1 with the IRT 1PL model
+<<>>=
+row1=rep(0,1+length(thetas))                 #individual item score is Bernoulli with p=inv_logit(theta-b)
+rdf1=data.frame()
+str(rdf1)
+s=rep(0,length(thetas))
+for (i in 1:N_dichot){
+  scores=rbinom(length(thetas),1,1.0/(1+exp(-(thetas-b1[i]))))
+  rdf1=rbind(rdf1,scores)
+}
+str(rdf1)
+@
+Generate the simulated item results for year 2 with the IRT 1PL model
+<<>>=
+row1=rep(0,1+length(thetas))                #individual item score is Bernoulli with p=inv_logit(theta-b)
+rdf2=data.frame()
+str(rdf2)
+s=rep(0,length(thetas))
+for (i in 1:N_dichot){
+  scores=rbinom(length(thetas),1,1.0/(1+exp(-(thetas-b2[i]))))
+  rdf2=rbind(rdf2,scores)
+}
+str(rdf2)
+@
+Generate the parameters to set up the call to STAN
+<<>>=
+y1<-data.matrix(rdf1)                     #get year 1 scores in matrix form
+y2<-data.matrix(rdf2)                     #get year 2 scores in matrix form
+
+data=list(N_stu=N_stu,N_dichot=N_dichot,y1=y1,y2=y2)    #build data list for STAN
+str(data)
+@
+Call STAN
+<<>>=
+library(rstan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+stanfit=stan(paste(pgm_name,".stan",sep=""),data=data,chains=4,iter=2000)      
+save(stanfit,file=stanfit_name)           #save the stanfit data structure
+@
+\end{document}

@@ -1,0 +1,55 @@
+\documentclass{article}
+
+\begin{document}
+\section{Estimating the Variability of the Colorado Growth Model}
+\subsection{The Colorado Growth Model}
+Since the U.S. Dept of Education approved it as a means of demonstrating Adequate Yearly Progress in 2005, the Colorado growth model has been adopted by more than twenty states, including Massachusetts, Rhode Island, and New Jersey.
+
+The model attempts to measure "growth" from a longitudinal record of between 2 and 5 years of standardized test scores for each student (the standardized tests vary from state to state) in the absence of a vertical scale on the underlying standardized tests.
+
+Basically, it takes an entire grade cohort and performs 100 quantile regressions to estimate cutpoints for the percentiles of the conditional distribution of scores for the most recent year given the student's previous test scores.
+
+In the words of its principal architecht Damian Betebenner,
+\par\vspace{0.3 cm}
+
+\textit{
+Quantile regression is used to establish curvi-linear functional relationships between the cohort's
+prior scores and the cohort's current scores. Specifically, for each grade by subject cohort, quantile
+regression is used to establish 100 (1 for each percentile) curvi-linear functional relationships between
+the students grade 3, grade 4, grade 5, and grade 6 prior scores and their grade 7 scores. }
+\par\vspace{0.3 cm}
+\textit{
+The result of these 100 separate analyses is a single coefficient matrix that can be employed as a look-up table
+relating prior student achievement to current achievement for each percentile. }
+\par\vspace{0.3 cm}
+\textit{
+Using the coefficient matrix, one can plug in any grade 3, 4, 5, and 6 prior score combination to the functional relationship
+to get the percentile cutpoints for grade 7 conditional achievement distribution associated with that
+prior score combination. These cutpoints are the percentiles of the conditional distribution associated
+with the individual’s prior achievement.
+}
+\subsection{Estimating the Variability}
+\par\vspace{0.3 cm}
+One of the drawbacks of this method is that the table lookup provides only a point estimate.  The standard implementation of the Colorado Growth Model, the R package SGP, has an option for computing an estimated standard deviation using a normal approximation, but it is not usually included when results are posted on the many state department of education web sites that now report "growth".
+\par\vspace{0.3 cm}
+It would seem that a Bayesian model would be a more natural way to obtain not only the conditional distribution, but variability estimates as well.
+\par\vspace{0.3 cm}
+The plan for this study is:
+\begin{itemize}
+\item  Use an IRT model with known parameters as a data generating process to simulate test results
+\item  Use STAN to model the IRT parameters
+\item  Use the posterior predictive probabilities to estimate "growth" and its variability
+\end{itemize}
+\par\vspace{0.3 cm}
+The Colorado definition of "growth" is very complicated and operational in nature.
+\par\vspace{0.3 cm}
+A more concise but equivalent definition of "growth" would be the conditional probability of getting a score (strictly) lower than the most recent one given the student's previous test scores.  The "strictly lower than" aspect is often overlooked because quantile regression assumes continuous underlying distributions, but it matters because test scores are discrete.  You can verify this behavior from the R code.   
+\par\vspace{0.3 cm}
+Loosely speaking, the growth score is a measure of how the student performed on the most recent test relative to what we would expect given their previous scores.  How much they over or underperformed relative to expectations is represented by the sum of the conditional probabilities of all scores lower than the one they received (scaled up to 0-100).
+\par\vspace{0.3 cm}
+This definition provides a way to compute "growth" from the conditional distribution of scores.  Suppose $(x_1,x_2,x_3,x_4,x_5)$ represents five years of tests for a student.  The "growth" is:
+\[
+Growth = 100\cdot P(X_5<x_5|x_1,x_2,x_3,x_4)
+\]
+
+\end{document}
