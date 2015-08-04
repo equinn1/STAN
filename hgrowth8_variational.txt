@@ -1,0 +1,43 @@
+ method = variational
+   variational
+     algorithm = meanfield (Default)
+       meanfield
+     iter = 10000 (Default)
+     grad_samples = 1 (Default)
+     elbo_samples = 100 (Default)
+     eta_adagrad = 0.10000000000000001 (Default)
+     tol_rel_obj = 0.01 (Default)
+     eval_elbo = 100 (Default)
+     output_samples = 1000 (Default)
+ id = 0 (Default)
+ data
+   file = Rdata/hgrowth8.R.data
+ init = 2 (Default)
+ random
+   seed = 34212668
+ output
+   file = output.csv (Default)
+   diagnostic_file =  (Default)
+   refresh = 100 (Default)
+
+
+This is Automatic Differentiation Variational Inference.
+
+(EXPERIMENTAL ALGORITHM: expect frequent updates to the procedure.)
+
+Gradient evaluation took 0.001462 seconds
+1000 iterations under these settings should take 1.462 seconds.
+Adjust your expectations accordingly!
+
+  iter       ELBO   delta_ELBO_mean   delta_ELBO_med   notes 
+     0     -1e+04             1.000            1.000
+   100    -3890.5             1.508            2.016
+   200    -3864.4             1.007            1.000   MAY BE DIVERGING... INSPECT ELBO
+   300    -3913.1             0.759            1.000   MAY BE DIVERGING... INSPECT ELBO
+   400    -3905.1             0.607            0.012   MAY BE DIVERGING... INSPECT ELBO
+   500    -3879.7             0.507            0.012   MAY BE DIVERGING... INSPECT ELBO
+   600    -3933.7             0.437            0.012
+   700    -3873.4             0.384            0.014
+   800    -3871.7             0.341            0.012
+   900    -3885.5             0.308            0.012
+  1000    -3879.4             0.208            0.007   MEDIAN ELBO CONVERGED
