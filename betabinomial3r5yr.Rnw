@@ -1,0 +1,69 @@
+\documentclass{article}
+
+\begin{document}
+<<>>=
+library(VGAM)
+library(SGP)
+library(rstan)
+pgm_name="betabinomial3r5yr"
+N_dichot <- 35;
+N_rows=4000*5000
+yr5df <- data.frame(SS_2009 = numeric(N_rows),SS_2010=numeric(N_rows),SS_2011=numeric(N_rows),SS_2012=numeric(N_rows),
+                    SS_2013=numeric(N_rows),SGP=numeric(N_rows),GR=numeric(N_rows))
+@
+Load simulation data from STAN
+<<>>=
+load("Rdata/betabinomial3_stanfit_08082015135030.Rdata")
+@
+<<>>=
+c_row=1
+y1 <- extract(stanfit,"y1p")
+y2 <- extract(stanfit,"y2p")
+y3 <- extract(stanfit,"y3p")
+y4 <- extract(stanfit,"y4p")
+y5 <- extract(stanfit,"y5p")
+for(j in 1:4000){
+  nstu=length(y1[[1]][j,])
+  IDcol=as.integer(1:nstu)
+  GRADE_2009=rep(3,nstu)
+  GRADE_2010=rep(4,nstu)
+  GRADE_2011=rep(5,nstu)
+  GRADE_2012=rep(6,nstu)
+  GRADE_2013=rep(7,nstu)
+  SS_2009 <- y1[[1]][j,]  
+  SS_2010 <- y2[[1]][j,]
+  SS_2011 <- y3[[1]][j,]
+  SS_2012 <- y4[[1]][j,]
+  SS_2013 <- y5[[1]][j,]
+  MCAS_wide=data.frame(IDcol,GRADE_2009,GRADE_2010,GRADE_2011,GRADE_2012,GRADE_2013,
+                       SS_2009,SS_2010,SS_2011,SS_2012,SS_2013)
+  colnames(MCAS_wide)=c("ID","GRADE_2009","GRADE_2010","GRADE_2011","GRADE_2012","GRADE_2013",
+                        "SS_2009","SS_2010","SS_2011","SS_2012","SS_2013")
+  MCAS_sgp<- studentGrowthPercentiles(panel.data=MCAS_wide,
+                sgp.labels=list(my.year=2013, my.subject="Mathematics"),
+                grade.progression=c(3,4,5,6,7),
+                convert.0and100=FALSE,
+                parallel.config=list(BACKEND="FOREACH", 
+                TYPE="doParallel", WORKERS=5))
+#
+  SGP <- MCAS_sgp$SGPercentiles$MATHEMATICS.2013$SGP
+  GR <- rep(0,length(SS_2013))
+  for (i in 1:length(SS_2013)){
+    if(SS_2013[i] > 0){
+      GR[i]<-100*pbetabinom.ab(SS_2013[i],N_dichot,1+SS_2009[i]+SS_2010[i]+SS_2011[i]+SS_2012[i],
+                               1+4*N_dichot-SS_2009[i]-SS_2010[i]-SS_2011[i]-SS_2012[i])    
+    }
+    yr5df$SS_2009[c_row] <- SS_2009[i]
+    yr5df$SS_2010[c_row] <- SS_2010[i]
+    yr5df$SS_2011[c_row] <- SS_2011[i]
+    yr5df$SS_2012[c_row] <- SS_2012[i]
+    yr5df$SS_2013[c_row] <- SS_2013[i]
+    yr5df$SGP[c_row] <- SGP[i]
+    yr5df$GR[c_row] <- GR[i]
+    c_row <- c_row+1
+  }
+}
+fname=paste("Rdata/",pgm_name,"_yr5df_",format(Sys.time(),'%m%d%Y%H%M%S'),".Rdata",sep="")
+save(yr5df,file=fname)
+@
+\end{document}

@@ -1,0 +1,31 @@
+\documentclass{article}
+
+\begin{document}
+Naming conventions for output files - dataset name includes a timestamp
+<<>>=
+pgm_name="betabinomial3"
+stanfit_name=paste("Rdata/",pgm_name,"_stanfit_",format(Sys.time(),'%m%d%Y%H%M%S'),".Rdata",sep="")  #STAN fit data structure
+@
+Exponential test
+<<>>=
+N <-5000      
+n <- 35
+p <- runif(N)
+y1 <- rbinom(N,n,p)
+@
+Generate the parameters to set up the call to STAN
+<<>>=
+data=list(N=N,n=n,y1=y1)    #build data list for STAN
+str(data)
+dump(c("N","n","y1"),file=paste("Rdata/",pgm_name,".R.data",sep=""))
+print(y1[1:30])
+@
+Call STAN
+<<>>=
+library(rstan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+stanfit=stan(paste(pgm_name,".stan",sep=""),data=data,chains=4,iter=2000)      
+save(stanfit,file=stanfit_name)           #save the stanfit data structure
+@
+\end{document}
