@@ -1,0 +1,94 @@
+\documentclass{article}
+
+\begin{document}
+Naming conventions for output files - dataset name includes a timestamp
+<<>>=
+pgm_name="MCAS4"
+stanfit_name=paste("Rdata/",pgm_name,"_stanfit_",format(Sys.time(),'%m%d%Y%H%M%S'),".Rdata",sep="")  #STAN fit data structure
+@
+Raw to scaled table
+<<>>=
+grad <- "4"
+load("R2S.Rdata")
+df<-subset(R2S, grade==4)
+r2s=df$scaled
+str(r2s)
+N_R2S <- length(r2s)
+@
+
+2011 MCAS IRT parameters for MC items
+<<>>=
+load("IRT_parms.Rdata")
+dfMC<-subset(IRT_parms, grade==4 & year==2011 & subj=='MTH' & dichot & scoring & c > 0.0 & sda > 0.0)
+str(dfMC)
+@
+2011 MCAS IRT parameters for SA items
+<<>>=
+dfSA<-subset(IRT_parms, grade==4 & year==2011 & subj=='MTH' & dichot & scoring & c<=0.0 & sda > 0.0)
+str(dfSA)
+@
+2011 MCAS IRT parameters for OR items
+<<>>=
+dfOR<-subset(IRT_parms, grade==4 & year==2011 & subj=='MTH' & !dichot & scoring & sdb > 0.0)
+str(dfOR)
+@
+Generate the parameters to set up the call to STAN
+<<>>=
+N_theta <- 300
+theta <- rnorm(N_theta,0,1)
+
+N_MC       <- nrow(dfMC)
+MC_mu_a    <- dfMC$a
+MC_sigma_a <- dfMC$sda
+MC_mu_b    <- dfMC$b
+MC_sigma_b <- dfMC$sdb
+MC_mu_c    <- dfMC$c
+MC_sigma_c <- dfMC$sdc
+@
+
+<<>>=
+N_SA       <- nrow(dfSA)
+SA_mu_a    <- dfSA$a
+SA_sigma_a <- dfSA$sda
+SA_mu_b    <- dfSA$b
+SA_sigma_b <- dfSA$sdb
+@
+<<>>=
+N_OR        <- nrow(dfOR)
+OR_mu_a     <- dfOR$a
+OR_sigma_a  <- dfOR$sda
+OR_mu_b     <- dfOR$b
+OR_sigma_b  <- dfOR$sdb
+OR_mu_d0    <- dfOR$d0
+OR_sigma_d0 <- dfOR$sdd0
+OR_mu_d1    <- dfOR$d1
+OR_sigma_d1 <- dfOR$sdd1
+OR_mu_d2    <- dfOR$d2
+OR_sigma_d2 <- dfOR$sdd2
+OR_mu_d3    <- dfOR$d3
+OR_sigma_d3 <- dfOR$sdd3
+OR_sigma_a[[2]] <- 0.006      #replace zero
+@
+<<>>=
+data=list(N_R2S=N_R2S,r2s=r2s,N_MC=N_MC,MC_mu_a=MC_mu_a,MC_sigma_a=MC_sigma_a,
+          MC_mu_b=MC_mu_b,MC_sigma_b=MC_sigma_b,MC_mu_c=MC_mu_c,MC_sigma_c=MC_sigma_c,
+          N_SA=N_SA,SA_mu_a=SA_mu_a,SA_sigma_a=SA_sigma_a,
+          SA_mu_b=SA_mu_b,SA_sigma_b=SA_sigma_b,N_OR=N_OR,OR_mu_a=OR_mu_a,OR_sigma_a=OR_sigma_a,
+          OR_mu_b=OR_mu_b,OR_sigma_b=OR_sigma_b,OR_mu_d0=OR_mu_d0,OR_sigma_d0=OR_sigma_d0,
+          OR_mu_d1=OR_mu_d1,OR_sigma_d1=OR_sigma_d1,OR_mu_d2=OR_mu_d2,OR_sigma_d2=OR_sigma_d2,
+          OR_mu_d3=OR_mu_d3,OR_sigma_d3=OR_sigma_d3,theta=theta,N_theta=N_theta)    #build data list for STAN
+str(data)
+dump(c("N_R2S","r2s","N_MC","MC_mu_a","MC_sigma_a","MC_mu_b","MC_sigma_b","MC_mu_c","MC_sigma_c",
+       "N_SA","SA_mu_a","SA_sigma_a","SA_mu_b","SA_sigma_b","theta","N_theta",
+       "N_OR","OR_mu_a","OR_sigma_a","OR_mu_b","OR_sigma_b","OR_mu_d0","OR_sigma_d0","OR_mu_d1","OR_sigma_d1",
+       "OR_mu_d2","OR_sigma_d2","OR_mu_d3","OR_sigma_d3"),file=paste("Rdata/",pgm_name,".R.data",sep=""))
+@
+Call STAN
+<<>>=
+library(rstan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+stanfit=stan(paste(pgm_name,".stan",sep=""),data=data,chains=4,iter=2000)      
+save(stanfit,file=stanfit_name)           #save the stanfit data structure
+@
+\end{document}
